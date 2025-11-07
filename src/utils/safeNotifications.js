@@ -1,107 +1,86 @@
-import { Platform, Alert } from 'react-native';
+import { Platform } from 'react-native';
 
-// Safe notification service with web notifications support
+// Safe notification service that doesn't import expo-notifications on web
 export const SafeNotificationService = {
   async requestPermission() {
-    if (Platform.OS === 'web') {
-      // Use web notifications on web platform
-      try {
-        const { WebNotificationService } = await import('./webNotifications');
-        return await WebNotificationService.requestPermission();
-      } catch (error) {
-        console.log('Web notifications not available, using alerts');
-        return true;
-      }
+    if (Platform.OS === 'web') return false;
+    
+    try {
+      const { NotificationService } = await import('./notifications');
+      return await NotificationService.requestPermission();
+    } catch (error) {
+      console.warn('Notifications not available:', error);
+      return false;
     }
-    console.log('📱 Notifiche simulate - Mobile compatibility mode');
-    return true; // Always return true for mobile demo
   },
 
   async scheduleTaskReminder(task) {
-    console.log(`🔔 Reminder per: "${task.title}"`);
+    if (Platform.OS === 'web') return null;
     
-    if (Platform.OS === 'web') {
-      // Use web notifications on web platform
-      try {
-        const { WebNotificationService } = await import('./webNotifications');
-        setTimeout(() => {
-          WebNotificationService.scheduleTaskReminder(task);
-        }, 3000); // 3 second delay
-      } catch (error) {
-        console.log('Fallback to alert for web');
-        setTimeout(() => {
-          alert(`🔔 Promemoria: "${task.title}"`);
-        }, 3000);
-      }
-    } else {
-      // Show alert for mobile
-      setTimeout(() => {
-        Alert.alert(
-          '🔔 Promemoria Task',
-          `Hai un task in scadenza: "${task.title}"`,
-          [{ text: 'OK', style: 'default' }]
-        );
-      }, 3000);
+    try {
+      const { NotificationService } = await import('./notifications');
+      return await NotificationService.scheduleTaskReminder(task);
+    } catch (error) {
+      console.warn('Task reminder not scheduled:', error);
+      return null;
     }
-    return `reminder_${task.id}`;
   },
 
   async scheduleTaskOverdue(task) {
-    console.log(`⚠️ Overdue per: "${task.title}"`);
+    if (Platform.OS === 'web') return null;
     
-    if (Platform.OS === 'web') {
-      // Use web notifications on web platform
-      try {
-        const { WebNotificationService } = await import('./webNotifications');
-        setTimeout(() => {
-          WebNotificationService.scheduleTaskOverdue(task);
-        }, 5000); // 5 second delay
-      } catch (error) {
-        console.log('Fallback to alert for web');
-        setTimeout(() => {
-          alert(`⚠️ Task Scaduto: "${task.title}"`);
-        }, 5000);
-      }
-    } else {
-      setTimeout(() => {
-        Alert.alert(
-          '⚠️ Task Scaduto',
-          `Il task "${task.title}" è scaduto!`,
-          [{ text: 'OK', style: 'destructive' }]
-        );
-      }, 5000);
+    try {
+      const { NotificationService } = await import('./notifications');
+      return await NotificationService.scheduleTaskOverdue(task);
+    } catch (error) {
+      console.warn('Overdue notification not scheduled:', error);
+      return null;
     }
-    return `overdue_${task.id}`;
   },
 
   async cancelTaskNotifications(taskId) {
-    // Simulate notification cancellation for Expo Go
-    console.log(`🚫 Notifiche cancellate per task: ${taskId}`);
-    return true;
+    if (Platform.OS === 'web') return;
+    
+    try {
+      const { NotificationService } = await import('./notifications');
+      return await NotificationService.cancelTaskNotifications(taskId);
+    } catch (error) {
+      console.warn('Notifications not canceled:', error);
+    }
   },
 
   async scheduleDailyReminder() {
-    // Simulate daily reminder scheduling for Expo Go  
-    console.log('📅 Reminder giornaliero simulato');
-    if (Platform.OS !== 'web') {
-      Alert.alert(
-        '📅 Reminder Attivato',
-        'Reminder giornaliero configurato (modalità demo)',
-        [{ text: 'OK', style: 'default' }]
-      );
+    if (Platform.OS === 'web') return null;
+    
+    try {
+      const { NotificationService } = await import('./notifications');
+      return await NotificationService.scheduleDailyReminder();
+    } catch (error) {
+      console.warn('Daily reminder not scheduled:', error);
+      return null;
     }
-    return 'daily_reminder_simulated';
   },
 
   async getBadgeCount() {
-    // Simulate badge count for Expo Go
-    return 0; // Always return 0 in simulation mode
+    if (Platform.OS === 'web') return 0;
+    
+    try {
+      const { NotificationService } = await import('./notifications');
+      return await NotificationService.getBadgeCount();
+    } catch (error) {
+      return 0;
+    }
   },
 
   async setBadgeCount(count) {
-    // Simulate badge setting for Expo Go
-    console.log(`📱 Badge count simulato: ${count}`);
-    return true;
+    if (Platform.OS === 'web') return;
+    
+    try {
+      const { NotificationService } = await import('./notifications');
+      return await NotificationService.setBadgeCount(count);
+    } catch (error) {
+      console.warn('Badge count not set:', error);
+    }
   },
 
   async clearBadge() {
@@ -109,9 +88,14 @@ export const SafeNotificationService = {
   },
 
   async clearAllTaskNotifications() {
-    // Simulate clearing all notifications for Expo Go
-    console.log('🧹 Tutte le notifiche simulate cancellate');
-    return true;
+    if (Platform.OS === 'web') return;
+    
+    try {
+      const { NotificationService } = await import('./notifications');
+      return await NotificationService.clearAllTaskNotifications();
+    } catch (error) {
+      console.warn('Could not clear notifications:', error);
+    }
   },
 };
 
