@@ -10,8 +10,8 @@ import {
   Platform 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Speech from 'expo-speech';
-import * as Haptics from 'expo-haptics';
+// import * as Speech from 'expo-speech'; // Removed for Expo Go compatibility
+// import * as Haptics from 'expo-haptics'; // Removed for Expo Go compatibility
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import { Typography, BorderRadius, Spacing } from '../styles/theme';
@@ -24,7 +24,7 @@ export const VoiceTaskInput = ({ onTaskCreated, onClose }) => {
 
   const startListening = async () => {
     try {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      // await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); // Disabled for Expo Go
       setIsListening(true);
       
       // Simulate voice recognition (in real app, use expo-speech or react-native-voice)
@@ -115,11 +115,17 @@ export const VoiceTaskInput = ({ onTaskCreated, onClose }) => {
 
     onTaskCreated(taskData);
     
-    // Provide audio feedback
-    Speech.speak(`Attività "${taskData.title}" aggiunta con successo`, {
-      language: 'it-IT',
-      rate: 0.8,
-    });
+    // Provide audio feedback - Disabled for Expo Go compatibility
+    // Speech.speak(`Attività "${taskData.title}" aggiunta con successo`, {
+    //   language: 'it-IT',
+    //   rate: 0.8,
+    // });
+    
+    Alert.alert(
+      '✅ Task Aggiunto!',
+      `Attività "${taskData.title}" aggiunta con successo`,
+      [{ text: 'OK', style: 'default' }]
+    );
     
     setTimeout(() => {
       onClose();
