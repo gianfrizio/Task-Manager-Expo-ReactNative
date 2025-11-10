@@ -97,6 +97,18 @@ export const SafeNotificationService = {
       console.warn('Could not clear notifications:', error);
     }
   },
+
+  async testLocalNotification() {
+    if (Platform.OS === 'web') return null;
+    
+    try {
+      const { NotificationService } = await import('./notifications');
+      return await NotificationService.testLocalNotification();
+    } catch (error) {
+      console.warn('Test notification failed:', error);
+      return null;
+    }
+  },
 };
 
 export default SafeNotificationService;

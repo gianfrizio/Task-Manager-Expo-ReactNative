@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { Typography, BorderRadius, Spacing } from '../styles/theme';
-import { formatDate, getPriorityColorWithTheme } from '../utils/helpers';
+import { formatDateTime, getPriorityColorWithTheme } from '../utils/helpers';
+import { getCategoryById } from '../utils/categories';
 
 // Stili statici - creati una sola volta
 const staticStyles = StyleSheet.create({
@@ -63,6 +64,18 @@ const staticStyles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
+  categoryContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.xs,
+  },
+  categoryIcon: {
+    marginRight: Spacing.xs,
+  },
+  categoryText: {
+    ...Typography.caption,
+    fontWeight: '600',
+  },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -95,9 +108,15 @@ export const TaskItem = ({ task, onToggle, onEdit, onDelete }) => {
     [task.priority, theme]
   );
 
-  // Memoizza formatted date usando helper centralizzato
-  const formattedDate = useMemo(() =>
-    formatDate(task?.dueDate),
+  // Memoizza categoria
+  const category = useMemo(() =>
+    getCategoryById(task?.category || 'other'),
+    [task?.category]
+  );
+
+  // Memoizza formatted date e time usando helper centralizzato
+  const formattedDateTime = useMemo(() =>
+    formatDateTime(task?.dueDate),
     [task?.dueDate]
   );
 
@@ -122,6 +141,9 @@ export const TaskItem = ({ task, onToggle, onEdit, onDelete }) => {
     dueDate: {
       color: theme.colors.textSecondary,
     },
+    categoryText: {
+      color: theme.colors.text,
+    },
   }), [theme]);
 
   // Funzioni di rendering sicure (memoizzate)
@@ -140,10 +162,10 @@ export const TaskItem = ({ task, onToggle, onEdit, onDelete }) => {
     return typeof priority === 'string' && priority.trim() ? priority.trim().toUpperCase() : 'MEDIUM';
   }, [task?.priority]);
 
-  const renderDueDate = useMemo(() => {
-    if (!formattedDate) return null;
-    return `📅 Scadenza: ${formattedDate}`;
-  }, [formattedDate]);
+  const renderDueDateTime = useMemo(() => {
+    if (!formattedDateTime) return null;
+    return `📅 ${formattedDateTime.date} ⏰ ${formattedDateTime.time}`;
+  }, [formattedDateTime]);
 
   return (
     <View style={[
@@ -196,10 +218,28 @@ export const TaskItem = ({ task, onToggle, onEdit, onDelete }) => {
             {renderDescription}
           </Text>
         )}
+        
+        <View style={staticStyles.categoryContainer}>
+          <Ionicons
+            name={category.icon}
+            size={14}
+            color={category.color}
+            style={staticStyles.categoryIcon}
+          />
+          <Text style={[
+            staticStyles.categoryText,
+            dynamicStyles.categoryText,
+            task.completed && staticStyles.completedText,
+            task.completed && dynamicStyles.completedTextColor,
+          ]}>
+            {category.name}
+          </Text>
+        </View>
+        
         <View style={staticStyles.footer}>
-          {renderDueDate && (
+          {renderDueDateTime && (
             <Text style={[staticStyles.dueDateBase, dynamicStyles.dueDate]}>
-              {renderDueDate}
+              {renderDueDateTime}
             </Text>
           )}
           <View style={staticStyles.actions}>

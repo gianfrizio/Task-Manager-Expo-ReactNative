@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { Button } from './Button';
 import { Typography, BorderRadius, Spacing } from '../styles/theme';
+import { Categories } from '../utils/categories';
 
 export const AddTaskForm = ({ onSubmit, initialTask = null, onCancel }) => {
   const { theme } = useTheme();
@@ -28,13 +29,39 @@ export const AddTaskForm = ({ onSubmit, initialTask = null, onCancel }) => {
     return `${day}/${month}/${year}`;
   }
 
-  // Utility per convertire da formato italiano a ISO
-  function convertToISO(italianDate) {
+  // Utility per formattare l'ora da ISO a formato HH:MM
+  function formatTimeForInput(isoDate) {
+    if (!isoDate) return '';
+    const date = new Date(isoDate);
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  }
+
+  // Utility per convertire da formato italiano + ora a ISO
+  function convertToISOWithTime(italianDate, timeString) {
     if (!italianDate) return null;
-    const parts = italianDate.split('/');
-    if (parts.length !== 3) return null;
-    const [day, month, year] = parts;
-    const date = new Date(year, month - 1, day);
+    
+    const dateParts = italianDate.split('/');
+    if (dateParts.length !== 3) return null;
+    
+    const [day, month, year] = dateParts;
+    let hours = 23, minutes = 59; // Default a fine giornata
+    
+    if (timeString && timeString.includes(':')) {
+      const timeParts = timeString.split(':');
+      if (timeParts.length === 2) {
+        hours = parseInt(timeParts[0], 10);
+        minutes = parseInt(timeParts[1], 10);
+        
+        // Valida ora e minuti
+        if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+          return null;
+        }
+      }
+    }
+    
+    const date = new Date(year, month - 1, day, hours, minutes);
     if (isNaN(date.getTime())) return null;
     return date.toISOString();
   }
@@ -42,8 +69,12 @@ export const AddTaskForm = ({ onSubmit, initialTask = null, onCancel }) => {
   const [title, setTitle] = useState(initialTask?.title || '');
   const [description, setDescription] = useState(initialTask?.description || '');
   const [priority, setPriority] = useState(initialTask?.priority || 'medium');
+  const [category, setCategory] = useState(initialTask?.category || 'other');
   const [dueDate, setDueDate] = useState(
     initialTask?.dueDate ? formatDateForInput(initialTask.dueDate) : ''
+  );
+  const [dueTime, setDueTime] = useState(
+    initialTask?.dueDate ? formatTimeForInput(initialTask.dueDate) : ''
   );
 
   
@@ -82,6 +113,36 @@ export const AddTaskForm = ({ onSubmit, initialTask = null, onCancel }) => {
     }
   };
 
+  // Formattazione automatica per l'ora
+  const handleTimeChange = (text) => {
+    // Se l'utente sta cancellando, permetti la cancellazione normale
+    if (text.length < dueTime.length) {
+      setDueTime(text);
+      return;
+    }
+    
+    // Se l'utente digita i due punti manualmente, mantienilo
+    if (text.includes(':')) {
+      if (text.length <= 5) {
+        setDueTime(text);
+      }
+      return;
+    }
+    
+    // Rimuovi tutti i caratteri non numerici per la formattazione automatica
+    const numbersOnly = text.replace(/\D/g, '');
+    
+    let formatted = numbersOnly;
+    if (numbersOnly.length >= 3) {
+      formatted = `${numbersOnly.slice(0, 2)}:${numbersOnly.slice(2, 4)}`;
+    }
+    
+    // Limita a 5 caratteri (HH:MM)
+    if (formatted.length <= 5) {
+      setDueTime(formatted);
+    }
+  };
+
   const priorities = [
     { value: 'low', label: 'Bassa', color: theme.colors.secondary || '#6C757D' },
     { value: 'medium', label: 'Media', color: theme.colors.warning || '#FFA500' },
@@ -94,12 +155,18 @@ export const AddTaskForm = ({ onSubmit, initialTask = null, onCancel }) => {
       return;
     }
 
-    // Valida e converte la data se presente
+    // Valida e converte la data con ora se presente
     let convertedDate = null;
     if (dueDate) {
-      convertedDate = convertToISO(dueDate);
+      // Valida il formato dell'ora se presente
+      if (dueTime && !dueTime.match(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
+        Alert.alert('Errore', 'Formato ora non valido. Usa il formato HH:MM (es: 14:30)');
+        return;
+      }
+      
+      convertedDate = convertToISOWithTime(dueDate, dueTime);
       if (!convertedDate) {
-        Alert.alert('Errore', 'Formato data non valido. Usa il formato gg/mm/aaaa');
+        Alert.alert('Errore', 'Formato data/ora non valido. Usa gg/mm/aaaa per la data e HH:MM per l\'ora');
         return;
       }
     }
@@ -108,6 +175,7 @@ export const AddTaskForm = ({ onSubmit, initialTask = null, onCancel }) => {
       title: title.trim(),
       description: description.trim(),
       priority,
+      category,
       dueDate: convertedDate,
     };
 
@@ -118,7 +186,9 @@ export const AddTaskForm = ({ onSubmit, initialTask = null, onCancel }) => {
       setTitle('');
       setDescription('');
       setPriority('medium');
+      setCategory('other');
       setDueDate('');
+      setDueTime('');
     }
   };
 
@@ -192,20 +262,77 @@ export const AddTaskForm = ({ onSubmit, initialTask = null, onCancel }) => {
           ))}
         </View>
 
+        <Text style={[styles.label, { color: theme.colors.text }]}>Categoria</Text>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoryScroll}
+          contentContainerStyle={styles.categoryContainer}
+        >
+          {Object.values(Categories).map((cat) => (
+            <Pressable
+              key={cat.id}
+              style={({ pressed }) => [
+                styles.categoryButton,
+                { 
+                  backgroundColor: category === cat.id ? cat.color : theme.colors.surface,
+                  borderColor: category === cat.id ? cat.color : theme.colors.border,
+                  opacity: pressed ? 0.8 : 1
+                }
+              ]}
+              onPress={() => setCategory(cat.id)}
+            >
+              <Ionicons 
+                name={cat.icon} 
+                size={20} 
+                color={category === cat.id ? '#FFFFFF' : theme.colors.text} 
+              />
+              <Text style={[
+                styles.categoryText,
+                { 
+                  color: category === cat.id ? '#FFFFFF' : theme.colors.text 
+                }
+              ]}>
+                {cat.name}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+
         <Text style={[styles.label, { color: theme.colors.text }]}>Data Scadenza (Opzionale)</Text>
-        <TextInput
-          style={[styles.input, { 
-            backgroundColor: theme.colors.card, 
-            borderColor: theme.colors.border,
-            color: theme.colors.text 
-          }]}
-          value={dueDate}
-          onChangeText={handleDateChange}
-          placeholder="gg/mm/aaaa (es: 31/12/2025)"
-          placeholderTextColor={theme.colors.textSecondary}
-          keyboardType="default"
-          maxLength={10}
-        />
+        <View style={styles.dateTimeContainer}>
+          <View style={styles.dateContainer}>
+            <TextInput
+              style={[styles.input, styles.dateInput, { 
+                backgroundColor: theme.colors.card, 
+                borderColor: theme.colors.border,
+                color: theme.colors.text 
+              }]}
+              value={dueDate}
+              onChangeText={handleDateChange}
+              placeholder="gg/mm/aaaa"
+              placeholderTextColor={theme.colors.textSecondary}
+              keyboardType="default"
+              maxLength={10}
+            />
+          </View>
+          
+          <View style={styles.timeContainer}>
+            <TextInput
+              style={[styles.input, styles.timeInput, { 
+                backgroundColor: theme.colors.card, 
+                borderColor: theme.colors.border,
+                color: theme.colors.text 
+              }]}
+              value={dueTime}
+              onChangeText={handleTimeChange}
+              placeholder="HH:MM"
+              placeholderTextColor={theme.colors.textSecondary}
+              keyboardType="numeric"
+              maxLength={5}
+            />
+          </View>
+        </View>
 
         <View style={styles.buttonContainer}>
           <Button
@@ -279,6 +406,44 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   priorityTextSelected: {
+  },
+  categoryScroll: {
+    marginTop: Spacing.xs,
+  },
+  categoryContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.xs,
+  },
+  categoryButton: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: Spacing.sm,
+    marginHorizontal: Spacing.xs,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    minWidth: 80,
+  },
+  categoryText: {
+    ...Typography.caption,
+    fontWeight: '600',
+    marginTop: Spacing.xs,
+    textAlign: 'center',
+  },
+  dateTimeContainer: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  dateContainer: {
+    flex: 2,
+  },
+  timeContainer: {
+    flex: 1,
+  },
+  dateInput: {
+    // Data input prende più spazio
+  },
+  timeInput: {
+    textAlign: 'center',
   },
   buttonContainer: {
     marginTop: Spacing.xl,

@@ -24,6 +24,57 @@ export const formatDate = (dateString) => {
   }
 };
 
+// Format time from date string
+export const formatTime = (dateString) => {
+  if (!dateString) return null;
+
+  try {
+    const date = new Date(dateString);
+    // Validate date is valid
+    if (isNaN(date.getTime())) {
+      console.warn('formatTime: invalid date string:', dateString);
+      return null;
+    }
+    return date.toLocaleTimeString('it-IT', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch (error) {
+    console.error('Error formatting time:', error);
+    return null;
+  }
+};
+
+// Format date and time together
+export const formatDateTime = (dateString) => {
+  if (!dateString) return null;
+
+  try {
+    const date = new Date(dateString);
+    // Validate date is valid
+    if (isNaN(date.getTime())) {
+      console.warn('formatDateTime: invalid date string:', dateString);
+      return null;
+    }
+    
+    const formattedDate = date.toLocaleDateString('it-IT', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+    
+    const formattedTime = date.toLocaleTimeString('it-IT', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    return { date: formattedDate, time: formattedTime };
+  } catch (error) {
+    console.error('Error formatting date time:', error);
+    return null;
+  }
+};
+
 // Validate date format (YYYY-MM-DD)
 export const isValidDate = (dateString) => {
   if (!dateString) return true; // Empty date is valid (optional)
